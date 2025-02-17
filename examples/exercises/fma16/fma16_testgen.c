@@ -253,13 +253,7 @@ int main()
  
     // Test cases: multiplication
     genMulTests(easyExponents, easyFracts, 0, "fmul_0", "// Multiply with exponent of 0, significand of 1.0 and 1.1, RZ", 0, 0, 0, 0);
-
-/*  // example of how to generate tests with a different rounding mode
-    softfloat_roundingMode = softfloat_round_near_even; 
-    genMulTests(easyExponents, easyFracts, 0, "fmul_0_rne", "// Multiply with exponent of 0, significand of 1.0 and 1.1, RNE", 1, 0, 0, 0); */
-    //fmul_1
     genMulTests(mediumExponents, mediumFracts, 0, "fmul_1", "// Multiply with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
-    //fmul_2
     genMulTests(mediumExponents, mediumFracts, 1, "fmul_2", "// With negative sign bit: Multiply with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
   
     //Addition tests
