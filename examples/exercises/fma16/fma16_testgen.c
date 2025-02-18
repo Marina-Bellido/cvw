@@ -18,11 +18,11 @@ typedef union sp {
 uint16_t easyExponents[] = {15, 0x8000};
 uint16_t easyFracts[] = {0, 0x200, 0x8000}; // 1.0 and 1.1
 
-uint16_t mediumExponents[] = {30, 20, 16, 14, 6, 1, 0x8000};
-uint16_t mediumFracts[] = {1023, 700, 512, 2, 1, 0x8000};
+uint16_t mediumExponents[] = {30, 16, 15,  14, 1, 0x8000};
+uint16_t mediumFracts[] = {1023, 700, 512, 1, 0x8000};
 
-uint16_t fSpecialExponents[] = {31, 30, 16, 14, 1, 0, 0x8000};
-uint16_t fSpecialFracts[] = {1024, 1023, 512, 1, 0, 0x8000};
+uint16_t fSpecialExponents[] = {31, 30, 16, 14, 1, 0, 0x8000}; //31exp and 0 in fraction causes a nan
+uint16_t fSpecialFracts[] = {1023, 1022, 511, 1, 0, 0x8000};
 
 void softfloatInit(void) {
     softfloat_roundingMode = softfloat_round_minMag; 
@@ -128,10 +128,7 @@ void genMulTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, 
             y.v = cases[j].v;
             for (k=0; k<=sgn; k++) {
                 y.v ^= (k<<15);
-                genCase(fptr, x, y, z, 1, 0, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-                if (sgn == 1){
-                    genCase(fptr, x, y, z, 1, 0, 1, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-                    }
+                genCase(fptr, x, y, z, 1, 0, k, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
             }
         }
     }
@@ -151,18 +148,15 @@ void genAddTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, 
         exit(1);
     }
     prepTests(e, f, testName, desc, cases, fptr, &numCases);
-    x.v = 0x3C00;
     for (i=0; i < numCases; i++) { 
         x.v = cases[i].v;
         for (j=0; j<numCases; j++) {
             z.v = cases[j].v;
             for (k=0; k<=sgn; k++) {
                 z.v ^= (k<<15);
-                genCase(fptr, x, y, z, 0, 1, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-                    if (sgn == 1){
-                    genCase(fptr, x, y, z, 0, 1, 1, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-                    }
-
+                genCase(fptr, x, y, z, 0, 1, 0, k, roundingMode, zeroAllowed, infAllowed, nanAllowed);
+                genCase(fptr, x, y, z, 0, 1, k, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
+                genCase(fptr, x, y, z, 0, 1, k, k, roundingMode, zeroAllowed, infAllowed, nanAllowed);
             }
         }
     }
@@ -192,21 +186,18 @@ void genFMATests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, 
                     z.v = cases[t].v;
                         for (k=0; k<=sgn; k++) {
                             z.v ^= (k<<15);
-                            genCase(fptr, x, y, z, 1, 1, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-                            if (sgn == 1){
-                                genCase(fptr, x, y, z, 1, 1, 1, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-
-                            }
+                            genCase(fptr, x, y, z, 1, 1, k, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
                         }
                 }
             }
         }
 
     }
+
     fclose(fptr);
 }
 
-void genFMA_SpecialTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, int roundingMode, int zeroAllowed, int infAllowed, int nanAllowed) {
+void genFMA_SpecialTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, int roundingMode) {
     int  j, s, k, i, t, numCases;
     float16_t x, y, z;
     float16_t cases[100000];
@@ -229,11 +220,7 @@ void genFMA_SpecialTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char
                     z.v = cases[t].v;
                         for (k=0; k<=sgn; k++) {
                             z.v ^= (k<<15);
-                            genCase(fptr, x, y, z, 1, 1, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-                            if (sgn == 1){
-                                genCase(fptr, x, y, z, 1, 1, 1, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
-
-                            }
+                            genCase(fptr, x, y, z, 1, 1, k, 0, roundingMode, 1, 1, 1);
                         }
                 }
             }
@@ -262,15 +249,26 @@ int main()
     genAddTests(mediumExponents, mediumFracts, 1, "fAdd_2", "// With negative sign bit: Add with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
 
     //FMA Tests
-    genFMA_SpecialTests(easyExponents, easyFracts, 0, "fFMA_0", "// Multiply and Add with exponent of 0, significand of 1.0 and 1.1, RZ", 0, 0, 0, 0);
-    genFMA_SpecialTests(mediumExponents, mediumFracts, 0, "fFMA_1", "// Multiply and Add with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
-    genFMA_SpecialTests(mediumExponents, mediumFracts, 1, "fFMA_2", "// With negative sign bit: Multiply and Add with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
+    genFMATests(easyExponents, easyFracts, 0, "fFMA_0", "// Multiply and Add with exponent of 0, significand of 1.0 and 1.1, RZ", 0, 0, 0, 0);
+    genFMATests(mediumExponents, mediumFracts, 0, "fFMA_1", "// Multiply and Add with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
+    genFMATests(mediumExponents, mediumFracts, 1, "fFMA_2", "// With negative sign bit: Multiply and Add with range of positive and negative exponents, significand ranging from smallest to largest, RZ", 0, 0, 0, 0);
+
+
+/*  // example of how to generate tests with a different rounding mode
+    softfloat_roundingMode = softfloat_round_near_even; 
+    genMulTests(easyExponents, easyFracts, 0, "fmul_0_rne", "// Multiply with exponent of 0, significand of 1.0 and 1.1, RNE", 1, 0, 0, 0); */
 
     //FMA Special Tests
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_0", "// Multiply and Add with special exponents and fractions, RZ",  1, 1, 1, 1);
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_1", "// Multiply and Add with special exponents and fractions, RNE", 2, 1, 1, 1);
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_2", "// Multiply and Add with special exponents and fractions, RM",  3, 1, 1, 1);
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_3", "// Multiply and Add with special exponents and fractions, RP",  4, 1, 1, 1);
-
+    //ROUNDING MODES:
+    // 00 for RZ; already done above so redundant to repeat again
+    // 01 for RNE;
+    softfloat_roundingMode = softfloat_round_near_even; 
+    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_1", "// Multiply and Add with special exponents and fractions, RNE", 1);
+    // 10 for RP;
+    softfloat_roundingMode = softfloat_round_max; 
+    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_2", "// Multiply and Add with special exponents and fractions, RM",  2);
+    // 11 for RN;
+    softfloat_roundingMode = softfloat_round_max; 
+    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_3", "// Multiply and Add with special exponents and fractions, RP",  3);
     return 0;
 }
