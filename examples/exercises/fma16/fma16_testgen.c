@@ -83,7 +83,7 @@ void genCase(FILE *fptr, float16_t x, float16_t y, float16_t z, int mul, int add
     float16_t resultmag = result;
     resultmag.v &= 0x7FFF; // take absolute value
     if (f16_lt(resultmag, smallest) && (resultmag.v != 0x0000)) fprintf (fptr, "// skip denorm: ");
-    if ((softfloat_exceptionFlags) >> 1 % 2) fprintf(fptr, "// skip underflow: ");
+    if ((softfloat_exceptionFlags >> 1) % 2) fprintf(fptr, "// skip underflow: ");
 
     // skip special cases if requested
     if (resultmag.v == 0x0000 && !zeroAllowed) fprintf(fptr, "// skip zero: ");
@@ -187,6 +187,8 @@ void genFMATests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, 
                         for (k=0; k<=sgn; k++) {
                             z.v ^= (k<<15);
                             genCase(fptr, x, y, z, 1, 1, k, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);
+                            genCase(fptr, x, y, z, 1, 1, 0, k, roundingMode, zeroAllowed, infAllowed, nanAllowed);
+                            genCase(fptr, x, y, z, 1, 1, k, k, roundingMode, zeroAllowed, infAllowed, nanAllowed);
                         }
                 }
             }
@@ -263,12 +265,32 @@ int main()
     // 00 for RZ; already done above so redundant to repeat again
     // 01 for RNE;
     softfloat_roundingMode = softfloat_round_near_even; 
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_1", "// Multiply and Add with special exponents and fractions, RNE", 1);
+    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 1, "fFMASpecial_1", "// Multiply and Add with special exponents and fractions, RNE", 1);
     // 10 for RP;
     softfloat_roundingMode = softfloat_round_max; 
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_2", "// Multiply and Add with special exponents and fractions, RM",  2);
+    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 1, "fFMASpecial_2", "// Multiply and Add with special exponents and fractions, RM",  2);
     // 11 for RN;
-    softfloat_roundingMode = softfloat_round_max; 
-    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 0, "fFMASpecial_3", "// Multiply and Add with special exponents and fractions, RP",  3);
+    softfloat_roundingMode = softfloat_round_minMag; 
+    genFMA_SpecialTests(fSpecialExponents, fSpecialFracts, 1, "fFMASpecial_3", "// Multiply and Add with special exponents and fractions, RP",  3);
+    
     return 0;
+    
 }
+
+
+//testing for negz and negp to checkk that they the control signals work. 
+// testing negative numbers in the FMA by changing the sign in the multiplication adn addition part.
+
+
+
+
+
+
+//qhwn ahouls i search vs browse:
+// controlf  -> search in file
+// command+shift+ f -> en lupa: search acroos the entire project and click thre dodds
+//
+//
+//
+//
+// 2 64 bit addition-> you could get 65 due to overflow
